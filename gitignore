@@ -1,0 +1,6 @@
+data/OPSSAT-AD/*.csv
+outputs/*
+!outputs/.gitkeep
+.venv/
+__pycache__/
+*.pyc
