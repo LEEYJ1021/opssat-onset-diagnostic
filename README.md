@@ -168,15 +168,15 @@ Tolerances: `rev8b` reproduces `rev8` to within 1.5e-5 (same seeds). Sequence-mo
 
 ## Paper element to script map
 
-> **[VERIFY AND COMPLETE BEFORE RELEASE.]** The assignments below are the authors' intended mapping; check each against the final manuscript numbering.
+
 
 | Paper element | Script | Output file |
 |---|---|---|
 | Table 1, Fig. 1 (sample flow) | `rev_common.py`, `paper2_pipeline.py`, `ledger/numbers_ledger.csv` | `ledger/numbers_ledger.csv` |
 | Fig. 2, increment over distributed features | `rev8_segment_level.py`, `rev8b_segment_level.py` | `rev8_segment_level.csv`, `rev8b_segment_level.csv` |
-| Supplementary Table S5 (roughness ablation) | `rev8c_rough_ablation.py` | `rev8c.log` / table |
+| Supplementary Table S5 (roughness ablation) | `rev8c_rough_ablation.py` | `rev8c_rough_ablation.csv` |
 | Table 2, Supplementary Table S6 | `rev2_symmetric_ci.py` | `rev2_symmetric_A_ci.csv` |
-| Fig. 3a, Supplementary Table S4 (estimator matrix, pseudo-onsets) | `rev1_estimator_control.py`, `rev4_estimator_matrix.py` | `rev4_onsets.csv` and derived tables |
+| Fig. 3a, Supplementary Table S4 (estimator matrix, pseudo-onsets) | `rev4_estimator_matrix.py` | `rev4_onsets.csv`, `rev4_firing_rates.csv`, `rev4_estimator_matrix.csv` |
 | Fig. 3b (estimator agreement) | `rev9_estimator_agreement.py` | `rev9_estimator_agreement.csv` |
 | Synthetic validation of the estimator | `rev3_synthetic.py` | log / table |
 | Fig. 4 (window scan) | `rev10_window_scan.py` | `rev10_window_scan.csv` |
@@ -184,7 +184,7 @@ Tolerances: `rev8b` reproduces `rev8` to within 1.5e-5 (same seeds). Sequence-mo
 | Supplementary Table S7 (sequence models) | `rev6_seq_models.py` | `rev6_auc*.csv`, `rev6_seed_model_long.csv` |
 | Supplementary Table S2 (attribution baselines) | `rev12_seq_attr.py` | `rev12_attr_baselines.csv` |
 | Supplementary Note on the seventeenth model | `rev5_models.py`, `rev7_mlp_attrib.py` | `rev7_attrib_sensitivity.csv` |
-| Supplementary Table S8 (firing rate by length) | computed ad hoc from the stage2 tier summaries (not reproduced by a script in this repository) | - |
+| Supplementary Table S8 (firing rate by length) | `rev1_estimator_control.py` | `rev1_firing_by_length.csv` |
 
 ## Randomness and determinism
 
