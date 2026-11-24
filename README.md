@@ -1,191 +1,211 @@
-# Rate-of-change variance, not level shifts, marks anomaly onset in satellite telemetry
+# OPS-SAT-AD: difference-domain variability and estimator dependence of onset-centred analyses
 
-Reproducibility package for the placebo-controlled representation analysis (level vs. rate of change vs. acceleration) and the sixteen-model attribution study on the public **OPS-SAT-AD** benchmark.
+Reproducibility package for the revised manuscript
+
+> **Length-controlled separation of anomalous OPS-SAT telemetry segments by difference-domain variability, and the estimator dependence of onset-centred analyses**
+> Y.-J. Lee, K. Lee, S. Park. Submitted to *Scientific Reports* (revision).
+
+## Status of this repository
+
+- **All analyses are exploratory.** The analysis plan (hypotheses H1-H5 and parameters, `docs/analysis_plan_freeze.json`) was recorded on 14 October 2026, *after* extensive exploratory work. It is **not a pre-registration**.
+- This branch (`revision-v2`) contains the **revised** pipeline. The original submission (placebo contrast, sixteen-model attribution, Kendall's W) is preserved in `legacy_v1/` and at tag `v1-original-submission`. **Its conclusions are superseded** and must not be cited as results of the revised paper.
+- Two claims of the original submission were withdrawn in the revision: (i) that rate-of-change variance "marks anomaly onset", and (ii) that sixteen models "never rely on level".
+
+## What the revised paper reports (one paragraph)
+
+After matching segment length, first- and second-difference features separate anomalous from nominal OPS-SAT-AD segments in four of six analysable channels (CADC0872, 0873, 0874, 0888), while length and sampling interval alone perform near chance; CADC0892 and CADC0894 are inconclusive. The increment over the derivative features already distributed with the benchmark is small. Around estimated onsets, contrasts against random pivots are large but depend on the change-point estimator; pseudo-onset controls (same estimator applied to normal segments), five estimator configurations, window scans and an injection analysis show that an onset-specific signature is not established. No analysis evaluates early detection or operator utility.
 
 ## Repository layout
 
 ```
 .
-├── data/OPSSAT-AD/              # dataset.csv, segments.csv (download; not committed)
-├── scripts/
-│   ├── 00_eda_verify.py         # schema / integrity checks
-│   ├── 01_channel_scope.py      # Kalman filter + BOCPD calibration, MCC channel scope
-│   ├── 02_onset_estimation.py   # Monte Carlo onset draws + reliability tier
-│   ├── 03_modelclass_analysis.py# dataset build, 16 models, attribution, agreement
-│   └── 04_placebo_contrast.py   # Table 2 and Fig. 2
-├── outputs/                     # all results are written here
-├── requirements.txt
-└── README.md
+├── src/common/rev_common.py          # shared utilities, constants, paths (reads environment variables)
+├── pipeline/
+│   ├── 01_onset_estimation/          # original pipeline incl. KF-BOCPD onset stage (paper2_pipeline.py)
+│   ├── 02_segment_level/             # segment-level analysis (primary result): rev8, rev8b, rev8c
+│   ├── 03_onset_contrasts/           # symmetric statistics, cluster CIs: rev2
+│   ├── 04_estimator_controls/        # pseudo-onsets, estimator matrix, synthetic validation, agreement: rev1, rev3, rev4, rev9
+│   ├── 05_window_power/              # window scan (rev10), injection analysis (rev11)
+│   ├── 06_sequence_models/           # sequence models (rev6), attribution baselines (rev12); sensitivity only
+│   ├── 07_supplementary/             # tabular models (rev5), seventeenth model (rev7)
+│   ├── 08_figures/                   # number/figure helpers
+│   ├── run_all.sh, run_rev6.sh       # launchers used for the revision runs (see "Launchers")
+├── data/
+│   ├── OPSSAT-AD/                    # place dataset.csv and segments.csv here (not committed)
+│   └── derived/                      # intermediate files required by the scripts (see below)
+├── outputs/
+│   ├── tables/                       # result tables (CSV) reported in the paper/response
+│   └── logs/                         # run logs
+├── ledger/numbers_ledger.csv         # sample-size ledger: every n in the paper with its source script
+├── docs/analysis_plan_freeze.json    # recorded analysis plan (post-exploration)
+├── env/requirements.lock.txt         # pinned environment
+└── legacy_v1/                        # original submission code (superseded)
 ```
 
-## Quick start
+## Data
+
+- **OPS-SAT-AD** (Ruszczak, Kotowski, Evans & Nalepa, *Sci. Data* 12, 710, 2025), Zenodo version v2: <https://doi.org/10.5281/zenodo.15108715> (accessed October 2026).
+- Download `dataset.csv` and `segments.csv` into `data/OPSSAT-AD/`. They are not redistributed here; the dataset licence on its Zenodo record applies.
+- A *segment* is one labelled interval of one channel (anomalous or normal). A *tick* is a sample position after sorting the segment by timestamp (no resampling; the sampling interval is 1 s or 5 s). Labels delimit a segment but **do not give the onset instant**; onsets are data-derived estimates.
+- Dataset facts used as sanity checks: 434 anomalous and 1,689 normal segments over nine channels. Analysable channels (at least ten segments of each class): CADC0872 (131 anomalous / 415 normal), CADC0873 (105 / 488), CADC0874 (69 / 125), CADC0888 (60 / 192), CADC0892 (34 / 177), CADC0894 (21 / 123). CADC0884 has no anomalous segments; CADC0886 (3 / 8) and CADC0890 (11 / 3) are too small.
+
+## Intermediate files (`data/derived/`) and what they depend on
+
+The analysis scripts do not start from raw data only. They read intermediate files whose provenance matters for reproduction.
+
+| File | Content | Produced by | Read by |
+|---|---|---|---|
+| `data/derived/p2_segment_features.csv` | per-segment features (level, dispersion, derivative statistics, covariates) | `pipeline/01_onset_estimation/paper2_pipeline.py` | `rev8*`, `rev8c` |
+| `data/derived/rev4_onsets.csv` | onsets (true and pseudo) for PELT(3), PELT(5), CUSUM, level-input BOCPD | `pipeline/04_estimator_controls/rev4_estimator_matrix.py` | `rev5`, `rev6`, `rev9`, `rev10`, `rev12` |
+| `causal_pipeline_outputs/stage2_mc_draws_raw.csv`, `stage2_mc_segment_summary_corrected.csv` (+ `_NORMAL` variants) | KF-BOCPD Monte Carlo onset draws and reliability tiers (primary estimator) | **[TO VERIFY BEFORE RELEASE: state here which script produced them, or that they are provided as precomputed inputs]** | `rev_common.py` (`STAGE`), `rev2`, `rev9`, `rev5`, `rev7` |
+
+> **Reproduction caveat.** All onset-centred results using the primary estimator depend on the `stage2_*` files. If the generating code is not included in this repository, these files must be treated as **fixed inputs** and a reproduction can only start downstream of them. Do not claim end-to-end reproduction of the primary-estimator onsets unless that stage is regenerated and compared with the reference counts below.
+
+## Environment
+
+Python 3.12.3 with NumPy 2.5.4, pandas 3.0.6, SciPy 1.18.1, scikit-learn 1.9.1, PyTorch 2.14.1 (GPU), XGBoost 3.4.1, LightGBM 4.7.0, ruptures 1.1.10. The full pinned list is in `env/requirements.lock.txt`. Runs used an NVIDIA RTX PRO 6000 Blackwell (driver 580.126.09).
+
+SHAP and Captum are **not** in this environment. The SHAP/Captum analyses of the original submission were run in a separate environment and are not used in the main results of the revision. Integrated gradients in the revision (`rev12`) are implemented directly in PyTorch.
 
 ```bash
 python -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt          # choose the torch build matching your CUDA
-pip freeze > outputs/requirements.lock.txt   # record the versions you actually used
-
-# 1. put dataset.csv and segments.csv into data/OPSSAT-AD/
-python scripts/00_eda_verify.py
-python scripts/01_channel_scope.py        # minutes (O(n^2) BOCPD per segment)
-python scripts/02_onset_estimation.py
-python scripts/03_modelclass_analysis.py 2>&1 | tee outputs/run_log.txt
-python scripts/04_placebo_contrast.py
+pip install -r env/requirements.lock.txt   # choose the torch build matching your CUDA
 ```
 
-Paths default to `data/OPSSAT-AD` and `outputs`; override with `OPSSAT_DATA_DIR` and `OPSSAT_OUT_DIR`.
+## Configuration
+
+Paths are controlled by environment variables (no author-specific paths are hard-coded):
+
+```bash
+export OPSSAT_BASE_DIR=/path/to/working/dir     # must contain paper2_outputs/ and causal_pipeline_outputs/
+                                                # (copy files from data/derived/ there as needed)
+export OPSSAT_OUT_DIR=$OPSSAT_BASE_DIR/revision_outputs   # default
+```
+
+`rev_common.py` defines `BASE`, `STAGE = BASE/causal_pipeline_outputs`, `OUT`, the channel list `[CADC0872, 0873, 0874, 0888, 0894]` (onset-centred analysis), `BURN_IN = 5`, `MIN_W = 5`. Each script inserts `src/common` into `sys.path` automatically.
+
+## Running
+
+Smoke tests (minutes) before full runs:
+
+```bash
+python pipeline/04_estimator_controls/rev9_estimator_agreement.py
+python pipeline/02_segment_level/rev8_segment_level.py --quick
+python pipeline/05_window_power/rev10_window_scan.py --quick
+python pipeline/05_window_power/rev11_injection.py --quick
+```
+
+Full runs, in dependency order:
+
+| Step | Command | Approx. runtime* | Output |
+|---|---|---|---|
+| 1 | `python pipeline/04_estimator_controls/rev4_estimator_matrix.py` | minutes | `rev4_onsets.csv` |
+| 2 | `python pipeline/03_onset_contrasts/rev2_symmetric_ci.py` | minutes | `rev2_symmetric_A_ci.csv` |
+| 3 | `python pipeline/04_estimator_controls/rev9_estimator_agreement.py` | minutes | `rev9_estimator_agreement.csv` |
+| 4 | `python pipeline/02_segment_level/rev8b_segment_level.py` | ~20 min | `rev8b_segment_level.csv` |
+| 5 | `python pipeline/02_segment_level/rev8c_rough_ablation.py` | minutes | roughness ablation |
+| 6 | `python pipeline/05_window_power/rev10_window_scan.py` | ~15-25 min | `rev10_window_scan.csv` |
+| 7 | `python pipeline/05_window_power/rev11_injection.py` | ~10-20 min | `rev11_injection_auc.csv`, `rev11_estimator_recovery.csv` |
+| 8 | `python pipeline/06_sequence_models/rev6_seq_models.py --neg random --estimators PELT3 --models CNN1D,TCN,BiLSTM,BiGRU,TinyTransformer --seed 1 --gpu 0 --n-boot 100` (also `--neg pseudo`; seeds 1, 2, 3; seed 42 is the default) | tens of minutes per seed | `rev6_auc*.csv` |
+| 9 | `python pipeline/06_sequence_models/rev12_seq_attr.py ...` (same arguments) | ~20-40 min | `rev12_attr_baselines.csv` |
+| 10 | `python pipeline/07_supplementary/rev5_models.py`, `rev7_mlp_attrib.py` | minutes | tabular models, seventeenth model |
+
+\*Rough values from the authors' runs on one machine with several jobs sharing CPU/GPU; not benchmarks.
+
+### Launchers
+
+`pipeline/run_all.sh` and `pipeline/run_rev6.sh` are the scripts used to run the revision jobs in parallel. They contain **author-specific paths** (`cd`, virtual-environment `source`). Edit these before use. `run_all.sh` also launches GPU jobs on GPU 0 only.
+
+## Method summary
+
+**Representations and statistics.** Level, first difference (`dx`) and second difference (`d2x`). At a pivot, the series is split into pre and post windows after a burn-in of 5 ticks with at least 5 points per window. Three statistics are computed for each representation: standardised mean shift (pooled SD), standardised mean shift (pre-window SD) and log variance ratio `ln(var_post/var_pre)`. A statistic is undefined (NaN) if a window has fewer than 5 points or zero variance. Effect size is the probability of superiority `A = U/(n1 n2)` (Mann-Whitney U with mid-ranks); `A = 0.5` means no difference. Intervals are 95% percentile intervals from a **segment-clustered bootstrap** (anomalous and normal segments resampled independently; 1000 resamples for onset contrasts, 300 for segment-level analyses). P values are two-sided, descriptive, and ignore clustering; no multiplicity adjustment is applied.
+
+**Primary onset estimator (KF-BOCPD).** Bayesian online change-point detection with a normal-inverse-gamma observation model (hazard 1/250, `kappa_max` 40) applied to Kalman innovations (local linear trend, channel-specific noise). Onset = median of 200 Monte Carlo draws. Reliability grades (high/medium/low) come from the spread of the draws around their median; only high and medium are retained. **The effective filter is detection**: of 386 anomalous segments in the five onset channels, 203 had no detected change-point pattern, 4 were too short and 1 had no admissible window; of 178 detected, 176 were high, 1 medium and 1 low (dropped), leaving 177. The estimator is variance-sensitive (synthetic validation in `rev3`).
+
+**Comparison estimators.** PELT (penalties 3 and 5, `ruptures`), CUSUM, and a level-input BOCPD. "PELT" without a penalty means PELT(3).
+
+**Random pivots.** For each channel a relative position is drawn from that channel's relative onset positions; pivot `tau = clip(round(rho*n), 10, n-5)`; five pivots per normal segment, from up to 300 normal segments per channel, seed 42. Normal segments are those evaluated by the primary estimator pipeline (`ev_n`); this explains, for example, 152 x 5 = 760 pivots in CADC0888 and 299 x 5 = 1,495 in CADC0872.
+
+**Pseudo-onsets.** The same estimator applied to normal segments. It produced no detections in CADC0872/0873 and 4 in CADC0874, so the control is usable only in CADC0888 and CADC0894.
+
+**Segment-level analysis.** Logistic regression (balanced) and random forest (300 trees, depth 6, balanced), stratified five-fold cross-validation (one sample per segment), three repeats; features are median-imputed and quantile-transformed within training folds. Feature sets: covariates only (length, duration, sampling interval), level, dispersion, the four benchmark-distributed derivative features, our derivative set (adds first- and second-difference roughness), all. Length matching pairs anomalous and normal segments within quartile bins of length.
+
+**Window scan and injection.** Window half-lengths 8, 10, 15, 20, 30, 50 ticks and the full segment, for PELT(3) and CUSUM onsets, five seeds, grouped cross-validation. Injection: mean shifts (2, 5, 10 sigma), variance increases (x2, x3, x5) and slopes (0.05, 0.15, 0.5 sigma/tick) added at a known position (40-60% of the segment) to real normal segments (oracle pivot); estimator recovery is scored within +/-5 ticks.
+
+**Sequence models (sensitivity analysis only).** 1D CNN, TCN, BiLSTM, BiGRU, small Transformer on three-channel windows (level, `dx`, `d2x`) of +/-15 ticks, under window-wise z-scoring or global robust scaling. Folds are formed by segment. **Within each training fold, 15% of segments are held out as an inner validation set** for early stopping (patience 6, up to 50 epochs, best-epoch restoration); the outer fold is used only for prediction. Seeds 1, 2, 3 and 42 change the fold assignment, the inner split and the weight initialisation. The simplified state-space block (not the published Mamba) is exploratory and not used in the main results.
+
+**Operating points.** The sequence scripts can also print recall/false-alarm/precision at a Youden threshold. These are selected on the same out-of-fold predictions and are **optimistic**; they are **not** reported in the paper.
+
+## Reference values for checking a reproduction
+
+Sample sizes (see `ledger/numbers_ledger.csv`; each analysis uses its own sample):
+
+| Analysis | n | Positive / negative |
+|---|---|---|
+| Segment level (six channels) | 1,940 | 420 / 1,520 |
+| Length-matched pairs per channel (0872, 0873, 0874, 0888, 0892, 0894) | - | 131, 105, 40, 60, 34, 21 |
+| Onset sample (primary estimator) | 177 onsets | 386 anomalous segments in five channels |
+| Random pivots (primary estimator) | 4,980 | five per evaluated normal segment |
+| Tabular models (KF-BOCPD, nine statistics defined) | 4,961 | 168 / 4,793 (1,163 segment groups) |
+| Seventeenth-model sensitivity (three statistics defined) | 4,974 | 168 / 4,806 |
+| Sequence, random negatives (PELT(3)) | 2,693 | 297 / 2,396 (prevalence 11.0%) |
+| Sequence, pseudo-onset negatives (PELT(3)) | 784 | 297 / 487 (prevalence 37.9%) |
+
+Segment-level length-matched AUC of the derivative set (`outputs/tables/rev8_segment_level.csv`):
+
+| Channel | Logistic regression | Random forest |
+|---|---|---|
+| CADC0872 | 0.962 | 0.976 |
+| CADC0873 | 0.954 | 0.975 |
+| CADC0874 | 0.980 | 0.993 |
+| CADC0888 | 0.963 | 0.973 |
+| CADC0892 | 0.934 | 0.928 |
+| CADC0894 | 0.543 | 0.816 |
+
+Onset versus random pivots, first-difference variance ratio, primary estimator (`outputs/tables/rev2_symmetric_A_ci.csv`, `config = rest_k5`): A = 0.968 (CADC0872), 0.976 (CADC0873), 0.865 (CADC0874), 0.761 (CADC0888), 0.865 (CADC0894).
+
+Tolerances: `rev8b` reproduces `rev8` to within 1.5e-5 (same seeds). Sequence-model AUCs vary with the seed (SD roughly 0.01-0.03 per model) and may differ in the second or third decimal across hardware and library versions (GPU kernels are not deterministic).
+
+## Paper element to script map
+
+> **[VERIFY AND COMPLETE BEFORE RELEASE.]** The assignments below are the authors' intended mapping; check each against the final manuscript numbering.
 
 | Paper element | Script | Output file |
 |---|---|---|
-| Table 1 (samples) | 03 | `modelclass_dataset_tabular_raw.csv` |
-| Table 2, Fig. 2 | 04 | `placebo_contrast_table2.csv`, `fig2_placebo_contrast.png` |
-| Table 3, Fig. 3, Fig. 4 (data) | 03 | `modelclass_feature_importance.csv`, `modelclass_performance_leaderboard.csv` |
-| Kendall's W, binomial | 03 | `modelclass_agreement_summary.csv` |
-| Supplementary Table S2 | 03 | `modelclass_family_summary.csv` |
-| Supplementary bootstrap note | 03 | `modelclass_bootstrap_stability.csv` |
-| Channel scope (section 5) | 01 | `channel_scope_final_locked.csv`, `channel_mcc_bootstrap.csv` |
-
-Figures 3 and 4 are not plotted by the scripts; their data are the two CSVs above.
-
-> ### Read this before claiming a reproduction
-> **`02_onset_estimation.py` is a reconstruction.** The original onset-estimation script was not available when this package was assembled. Script 02 re-implements the described procedure (200 Monte Carlo draws, median onset, high/medium/low reliability) on top of the BOCPD onset posterior from script 01. The **tier thresholds are assumptions**, so the retained segment count may differ from the paper's 177 (872: 41, 873: 29, 874: 50, 888: 36, 894: 21). Script 02 prints its counts next to these. If you have the original `stage2_mc_draws_raw.csv` and `stage2_mc_segment_summary_corrected.csv` (schema below), drop them into `outputs/` and skip script 02. All downstream numbers depend on these two files.
->
-> **The pipeline was smoke-tested on synthetic data only** (scripts 01–04, without torch/xgboost/lightgbm/shap). It has not been run on the real benchmark by the package author, so compare your outputs with the reference values below.
-
-## Step 0 - Data (script 00)
-
-OPS-SAT-AD: Ruszczak, Kotowski, Evans & Nalepa, *Sci. Data* 12, 710 (2025). Get the files from the Zenodo record given in that paper's Data Availability section and place them in `data/OPSSAT-AD/`.
-
-| File | Shape | Content |
-|---|---|---|
-| `dataset.csv` | 2,123 x 23 | per-segment summary features, `anomaly`, `train`, `channel` |
-| `segments.csv` | 303,493 x 8 | `channel, timestamp, value, label, sampling, anomaly, segment, train` |
-
-The analysis uses only `segments.csv` (`channel`, `segment`, `anomaly`, `timestamp`, `value`). `dataset.csv` is used for sanity checks. A *segment* is one labelled interval of one channel; a *tick* is a sample position after sorting the segment by `timestamp` (no resampling; sampling is 1 s or 5 s). All onset/pivot/window indices are positions in that sorted array. Labels delimit a segment but **do not give the onset instant**.
-
-Script 00 asserts: shapes, 434 anomalous / 1,689 normal segments, one channel and one label per segment, no NaNs, per-channel (normal, anomalous) counts of 872 (415, 131), 873 (488, 105), 874 (125, 69), 888 (192, 60), 894 (123, 21). It exits non-zero on failure.
-
-## Step 1 - Channel scope (script 01)
-
-Decides which channels have a detectable anomaly signature. Paper scope: **CADC0872, 0873, 0874, 0888, 0894**; excluded: 0884 (no anomalies), 0886 and 0890 (too few segments), 0892 (MCC < 0).
-
-1. **Profiling** on normal segments: `frac_zero_diff >= 0.10` -> quantized (step = 25th percentile of non-zero |dx|); else min non-zero |dx| < 1e-6 -> float-noise; else continuous. Noise `r = var(dx)/2`, `q = var(d2x)/6` (floor 1e-14), shrunk across channels with empirical Bayes on log-variances. Quantization floor `step^2/12` added to observation noise.
-2. **Kalman filter**, local linear trend: state [level, slope], `A=[[1,1],[0,1]]`, `H=[1,0]`, `Q=diag(0,q)`, `P0=10 I`; z = innovation / sqrt(S).
-3. **BOCPD** on z: Normal-Inverse-Gamma, hazard 1/250, prior (0,1,1,1), forgetting with `kappa_max=40`. Onset declared when MAP run length drops from >5 to <=2; candidate onset = t - run length.
-4. Locked switches: `USE_MIXTURE_NOISE_ESTIMATOR=False`, `USE_BOCPD_FORGETTING=True`.
-5. **Scope rule**: exclude if `n_anom=0`, `n_anom<5`, `n_norm<5`, or MCC <= 0; 2,000-resample bootstrap MCC CI.
-
-Expected (paper-level) values with locked switches: 872 recall 0.321 / FA 0.000 / MCC 0.514; 873 0.276 / 0.000 / 0.489; 874 0.725 / 0.032 / 0.740; 888 0.617 / 0.391 / 0.194; 894 1.000 / 0.797 / 0.189; 892 0.971 / 0.994 / -0.090 (excluded). The script prints whether the resulting scope matches the paper.
-
-BOCPD is used here only for scope and as the onset posterior for script 02. The train-only ablation re-selection of the two switches from the original work is not included.
-
-## Step 2 - Onset estimation (script 02)
-
-Per anomalous in-scope segment on which BOCPD fired: draw 200 onsets from the normalised onset posterior, onset = rounded median of draws, tier from posterior mass near the reset (`onset_confidence`) and draw SD. Only `high`/`medium` are kept. **Interface contract** (what script 03 reads):
-
-`outputs/stage2_mc_draws_raw.csv`: `channel, segment, draw, onset_idx_sampled` (200 rows per segment; 0-based tick index).
-`outputs/stage2_mc_segment_summary_corrected.csv`: at least `channel, segment, reliability_tier` (`high`/`medium`/`low`).
-
-Tunables: `--high-conf 0.8 --medium-conf 0.5 --high-sd 2.0`.
-
-## Step 3 - Dataset construction (script 03, part 1)
-
-| Parameter | Value |
-|---|---|
-| `BURN_IN` | 5 |
-| `MIN_WINDOW_POINTS` | 5 |
-| placebo pivots per normal segment | 5 |
-| max normal segments per channel | 300 (`random_state=42`) |
-| sequence half-window | 15 ticks (30-tick window) |
-| seed | 42 |
-
-**Anomalous samples (label 1).** For each retained segment (values sorted by time, length n, onset tau): skip if `tau < 10` or `tau > n-5`; record `tau/n` in the channel's ratio pool.
-
-**Placebo samples (label 0).** For each in-scope channel: take its normal segments (sample 300 if more); per segment draw 5 ratios `rho` from the channel's ratio pool (`rng.choice`); `tau = clip(round(rho*n), 10, max(n-5, 10))`; skip if outside `[10, n-5]`. This matches the relative position of pivots to onsets of the same channel.
-
-**Statistics at pivot tau** (`dx = diff(x)`, `d2x = diff(dx)`):
-
-| Feature | Pre window | Post window | Statistic |
-|---|---|---|---|
-| `level` | `x[5:tau]` | `x[tau:]` | `abs(mean_post - mean_pre) / sqrt((var_pre + var_post)/2)` (ddof=1) |
-| `diff` | `dx[4:tau-1]` | `dx[tau-1:]` | `ln(var_post / var_pre)` (ddof=1) |
-| `diff2` | `d2x[3:tau-2]` | `d2x[tau-2:]` | `ln(var_post / var_pre)` |
-
-A statistic is NaN if a window has < 5 points (< 2 for level) or zero variance.
-
-**Sequence windows.** For pivot tau and h=15: `lo=tau-h`, `hi=tau+h`; dropped if `lo-2<0` or `hi>n`. Channels: `x[lo:hi]`, `dx[lo-1:hi-1]`, `d2x[lo-2:hi-2]`, each z-scored within its own window.
-
-**Checkpoints printed by the script (paper values).** Retained anomalous segments 177; normal segments 1,040; placebo pivots 4,980; anomalous with all three statistics defined 168; placebo 4,828; tabular set 4,996 rows (168/4,828); sequence set 2,733 windows. If these differ, stop and fix the onset inputs before interpreting model results.
-
-`modelclass_dataset_tabular_raw.csv` holds all pivots including NaN statistics (used by script 04, because Table 2 uses per-statistic sample sizes); `modelclass_dataset_tabular.csv` holds rows with all three defined.
-
-## Step 4 - Placebo contrast (script 04)
-
-For each channel x representation (15 tests): one-sided Mann-Whitney U (onset > placebo), `A = U/(n1 n2)`, Bonferroni `p_adj = min(1, 15 p)`, NaNs dropped per statistic. Paper: all ten difference-based contrasts `p_adj <= 2.0e-4` and `A` in 0.75-0.98; all five level contrasts `p_adj = 1.000` and `A` in 0.23-0.56. P values are descriptive (five pivots share a normal segment); effect sizes are primary. Script 04 prints these ranges next to the paper's.
-
-## Step 5 - Sixteen models (script 03, part 2)
-
-Task: onset (1) vs placebo pivot (0). Tabular input = the three statistics; sequence input = the 3 x 30 window.
-
-**Validation.** Tabular: `GroupKFold(5)` by `channel_segment`, `StandardScaler` fitted on the training fold. Sequence: segments assigned to 5 folds via `rng.permutation(unique_groups)` and `i % 5`. Class imbalance: balanced class weights (tabular) / `pos_weight = n_neg/n_pos` (sequence). Recall and false-alarm rate at the Youden optimum of the out-of-fold predictions.
-
-**Tabular models (10).**
-
-| Model | Family | Configuration |
-|---|---|---|
-| Logistic L2 / L1 | Linear / sparse | balanced, max_iter 2000 (L1: liblinear) |
-| Gaussian NB | Probabilistic | defaults |
-| kNN | Instance-based | k=15 |
-| SVM (RBF) | Kernel | balanced, probability=True |
-| Random forest | Bagging | 300 trees, depth 6, balanced |
-| Extra trees | Bagging, extra-random | 300 trees, depth 6, balanced |
-| Gradient boosting | Boosting | 200 est., depth 3 |
-| XGBoost | Boosting | 300 est., depth 4, lr 0.05 |
-| LightGBM | Boosting | 300 est., depth 4, lr 0.05 |
-
-**Sequence models (6).** 1D CNN (2 x Conv1d k=5, 32 ch); TCN (3 residual blocks, dilations 1/2/4); BiLSTM and BiGRU (1 bidirectional layer, 32 units); small Transformer (d=32, 2 layers, 4 heads, FFN 64, sinusoidal PE); simplified selective state-space block (d=32, state 16; **not** the published Mamba). Adam (lr 1e-3, wd 1e-4), batch 32, <= 60 epochs, early stopping (patience 6) that **monitors the held-out fold**, so AUCs are upper-range.
-
-**Attribution.** Tabular: mean |SHAP| over up to 400 held-out examples (Tree / Linear / Kernel explainer with 20 k-means background points, 100 samples); fallback to permutation importance (20 repeats, AUC) if SHAP fails (watch the log for `[SHAP ... -> permutation importance]`). Sequence: Integrated Gradients (Captum, zero baseline, 32 Gauss-Legendre steps), |attribution| summed over time. Shares sum to 1 per model and fold, then averaged over folds.
-
-**Agreement.** Rank the three representations within each model; Kendall's W with m=16, n=3, `chi2 = m(n-1)W`; exact binomial `(2/3)^m`; family means over 13 families.
-
-**Bootstrap criterion.** RF and L2 logistic, 200 resamples (pivots resampled by class), permutation importance; records whether the two difference representations jointly exceed level. This passes with probability 0.75 under uninformative attribution, so it is weak evidence alone.
-
-**Excluded model.** `--include-mlp` re-enables the shallow network (16, 8) that was excluded post hoc (out-of-fold AUC 0.403). Counting it, level ranks first in 1 of 17 models and last in 14 of 17.
-
-**Flags.** `--skip-deep`, `--skip-bootstrap`, `--include-mlp`; `DETERMINISTIC=1` enables deterministic torch kernels (will shift sequence-model numbers slightly from the published ones).
-
-## Reference values (paper)
-
-| Model | AUC | Level | First | Second |
-|---|---|---|---|---|
-| Small Transformer | 0.994 | 0.178 | 0.438 | 0.384 |
-| TCN | 0.993 | 0.200 | 0.380 | 0.419 |
-| BiGRU | 0.989 | 0.285 | 0.388 | 0.327 |
-| 1D CNN | 0.983 | 0.303 | 0.301 | 0.396 |
-| BiLSTM | 0.980 | 0.211 | 0.497 | 0.292 |
-| State-space (simplified) | 0.969 | 0.428 | 0.441 | 0.130 |
-| SVM (RBF) | 0.948 | 0.061 | 0.466 | 0.472 |
-| LightGBM | 0.940 | 0.232 | 0.459 | 0.309 |
-| XGBoost | 0.935 | 0.148 | 0.419 | 0.433 |
-| Random forest | 0.931 | 0.084 | 0.456 | 0.460 |
-| Extra trees | 0.927 | 0.145 | 0.389 | 0.466 |
-| Gradient boosting | 0.924 | 0.068 | 0.371 | 0.561 |
-| Logistic (L2) | 0.920 | 0.060 | 0.407 | 0.534 |
-| Logistic (L1) | 0.920 | 0.057 | 0.412 | 0.531 |
-| kNN | 0.918 | 0.129 | 0.391 | 0.480 |
-| Gaussian NB | 0.900 | 0.051 | 0.446 | 0.503 |
-
-Kendall's W = 0.609, chi2 = 19.50 (d.f. 2), p = 5.8e-5; level ranked first in 0/16 and last in 14/16; binomial p = 0.0015; bootstrap 200/200 for both models.
-
-**Suggested acceptance criteria.** Sample counts must match. Tabular shares and AUCs should be close (seeded; small differences from SHAP/library versions). Sequence models: AUC within about 0.01 and no model ranking level first.
+| Table 1, Fig. 1 (sample flow) | `rev_common.py`, `paper2_pipeline.py`, `ledger/numbers_ledger.csv` | `ledger/numbers_ledger.csv` |
+| Fig. 2, increment over distributed features | `rev8_segment_level.py`, `rev8b_segment_level.py` | `rev8_segment_level.csv`, `rev8b_segment_level.csv` |
+| Supplementary Table S5 (roughness ablation) | `rev8c_rough_ablation.py` | `rev8c.log` / table |
+| Table 2, Supplementary Table S6 | `rev2_symmetric_ci.py` | `rev2_symmetric_A_ci.csv` |
+| Fig. 3a, Supplementary Table S4 (estimator matrix, pseudo-onsets) | `rev1_estimator_control.py`, `rev4_estimator_matrix.py` | `rev4_onsets.csv` and derived tables |
+| Fig. 3b (estimator agreement) | `rev9_estimator_agreement.py` | `rev9_estimator_agreement.csv` |
+| Synthetic validation of the estimator | `rev3_synthetic.py` | log / table |
+| Fig. 4 (window scan) | `rev10_window_scan.py` | `rev10_window_scan.csv` |
+| Fig. 5 (injection analysis) | `rev11_injection.py` | `rev11_injection_auc.csv`, `rev11_estimator_recovery.csv` |
+| Supplementary Table S7 (sequence models) | `rev6_seq_models.py` | `rev6_auc*.csv`, `rev6_seed_model_long.csv` |
+| Supplementary Table S2 (attribution baselines) | `rev12_seq_attr.py` | `rev12_attr_baselines.csv` |
+| Supplementary Note on the seventeenth model | `rev5_models.py`, `rev7_mlp_attrib.py` | `rev7_attrib_sensitivity.csv` |
+| Supplementary Table S8 (firing rate by length) | **[script to be identified]** | - |
 
 ## Randomness and determinism
 
-Global seed 42 (`numpy`, `random`, `torch`). One module-level `numpy.random.Generator` is consumed sequentially (pivot sampling, sequence fold assignment, bootstrap), so **run script 03 top to bottom, unmodified**. Explained examples are drawn with the global `np.random` state. The original run did not enable deterministic GPU kernels, so sequence-model AUCs and shares may differ in the 2nd-3rd decimal across hardware or library versions. Library versions of the original run were not recorded; commit your `pip freeze`.
+Seed 42 is the default (`numpy`, `torch`); sequence-model seeds 1, 2, 3 and 42 were run. Pivot sampling uses `numpy.random.default_rng` with fixed seeds in the code. Random forests may use multiple threads. GPU runs were not made deterministic.
 
-Version pitfalls handled in code: `xgboost >= 2` removed `use_label_encoder`; recent `shap` can return a 3-D array for binary `predict_proba` (normalised to the positive class); cuDNN RNN backward fails in `eval()` (attribution is wrapped in `torch.backends.cudnn.flags(enabled=False)`); without Captum a manual IG is used, which differs slightly from Gauss-Legendre quadrature.
+## Known limitations of this package
 
-## Citation and license
+- The primary-estimator onset files (`stage2_*`) are inputs; see the reproduction caveat above.
+- Sequence-model and attribution results use PELT(3) onsets, one attribution seed and a single estimator; they are sensitivity analyses, not conclusions.
+- The pseudo-onset control is feasible in two channels only and is sensitive to pivot position and sample size.
+- Onset-level channels were selected using detector performance (CADC0892 excluded because the detector was below chance); the onset sample is weighted towards clearer cases.
+- Different analyses use different samples (see the ledger); sequence and tabular results are not directly comparable.
+- Launcher scripts contain author-specific paths.
+- No external-dataset replication (hypothesis H5) was performed.
 
-Cite the paper (add final reference) and: Ruszczak, B., Kotowski, K., Evans, D. & Nalepa, J. The OPS-SAT benchmark for detecting anomalies in satellite telemetry. *Sci. Data* 12, 710 (2025). Add your code license; OPS-SAT-AD is distributed under the license on its Zenodo record.
+## Legacy code (original submission)
+
+`legacy_v1/` contains the scripts of the original submission (`00_eda_verify.py` ... `04_placebo_contrast.py`) and its README. Those scripts implement the placebo contrast, the sixteen-model attribution study, Kendall's W and a binomial calculation, and an early-stopping protocol that monitored the held-out fold. They are kept for transparency only.
+
+## Citation and licence
+
+Cite the paper (final reference to be added) and the benchmark: Ruszczak, B., Kotowski, K., Evans, D. & Nalepa, J. The OPS-SAT benchmark for detecting anomalies in satellite telemetry. *Sci. Data* 12, 710 (2025).
+
+Code: MIT (see `LICENSE`). Derived data: CC BY 4.0. Upon acceptance this repository will be archived as a tagged release on Zenodo, and the DOI and release tag will be added here and in the manuscript's Data availability statement.
