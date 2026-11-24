@@ -1,10 +1,5 @@
 # OPS-SAT-AD: difference-domain variability and estimator dependence of onset-centred analyses
 
-Reproducibility package for the revised manuscript
-
-> **Length-controlled separation of anomalous OPS-SAT telemetry segments by difference-domain variability, and the estimator dependence of onset-centred analyses**
-> Y.-J. Lee, K. Lee, S. Park. Submitted to *Scientific Reports* (revision).
-
 ## Status of this repository
 
 - **All analyses are exploratory.** The analysis plan (hypotheses H1-H5 and parameters, `docs/analysis_plan_freeze.json`) was recorded on 14 October 2026, *after* extensive exploratory work. It is **not a pre-registration**.
@@ -208,4 +203,4 @@ Seed 42 is the default (`numpy`, `torch`); sequence-model seeds 1, 2, 3 and 42 w
 
 Cite the paper (final reference to be added) and the benchmark: Ruszczak, B., Kotowski, K., Evans, D. & Nalepa, J. The OPS-SAT benchmark for detecting anomalies in satellite telemetry. *Sci. Data* 12, 710 (2025).
 
-Code: MIT (see `LICENSE`). Derived data: CC BY 4.0. Upon acceptance this repository will be archived as a tagged release on Zenodo, and the DOI and release tag will be added here and in the manuscript's Data availability statement.
+Code: MIT (see `LICENSE`). Derived data: CC BY 4.0.
