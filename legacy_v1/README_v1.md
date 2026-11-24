@@ -1,3 +1,5 @@
+> **Superseded by the revision; see the top-level README.**
+
 # Rate-of-change variance, not level shifts, marks anomaly onset in satellite telemetry
 
 Reproducibility package for the placebo-controlled representation analysis (level vs. rate of change vs. acceleration) and the sixteen-model attribution study on the public **OPS-SAT-AD** benchmark.
