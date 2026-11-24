@@ -1,0 +1,45 @@
+device: cuda:0
+
+=== PELT3 | window_z | neg=random: 윈도우 2693 (양성 297, 음성 2396)
+  CNN1D            level=0.725 d1=0.782 d2=0.754 all=0.797 (79s)
+  TCN              level=0.744 d1=0.776 d2=0.740 all=0.796 (106s)
+  BiLSTM           level=0.635 d1=0.731 d2=0.687 all=0.751 (90s)
+  BiGRU            level=0.652 d1=0.692 d2=0.675 all=0.762 (102s)
+  TinyTransformer  level=0.804 d1=0.767 d2=0.710 all=0.816 (139s)
+
+=== PELT3 | global_robust | neg=random: 윈도우 2693 (양성 297, 음성 2396)
+  CNN1D            level=0.664 d1=0.681 d2=0.667 all=0.728 (46s)
+  TCN              level=0.662 d1=0.698 d2=0.731 all=0.716 (86s)
+  BiLSTM           level=0.642 d1=0.552 d2=0.647 all=0.690 (63s)
+  BiGRU            level=0.642 d1=0.643 d2=0.663 all=0.715 (67s)
+  TinyTransformer  level=0.671 d1=0.721 d2=0.637 all=0.740 (149s)
+
+[1] 모델 중앙값 AUC (neg=random)
+set                      level     d1     d2  deriv    all  all_minus_d1  all_minus_d2
+estimator mode                                                                        
+PELT3     global_robust  0.662  0.681  0.663  0.695  0.716         0.710         0.717
+          window_z       0.725  0.767  0.710  0.777  0.796         0.758         0.791
+
+[2] ΔAUC: 모델 중앙값, CI>0 모델 비율, CI<0 모델 비율
+                                                     median_delta  frac_ci_pos  frac_ci_neg
+estimator mode          contrast                                                           
+PELT3     global_robust all-all_minus_d1 (d1 추가 이득)         0.006          0.4          0.0
+                        all-all_minus_d2 (d2 추가 이득)         0.010          0.6          0.0
+                        all-deriv (level 추가 이득)             0.021          0.4          0.0
+                        d1-level                            0.017          0.4          0.2
+                        d2-level                            0.005          0.2          0.0
+                        deriv-level                         0.032          0.8          0.0
+          window_z      all-all_minus_d1 (d1 추가 이득)         0.030          0.8          0.0
+                        all-all_minus_d2 (d2 추가 이득)         0.009          0.2          0.2
+                        all-deriv (level 추가 이득)             0.015          0.4          0.0
+                        d1-level                            0.041          0.8          0.2
+                        d2-level                            0.023          0.2          0.2
+                        deriv-level                         0.056          0.8          0.0
+
+[3] 운영점 (all, 같은 OOF에서 Youden 선택 → 낙관적)
+                         prevalence  recall    far  precision
+estimator mode                                               
+PELT3     global_robust        0.11   0.771  0.461      0.172
+          window_z             0.11   0.892  0.450      0.193
+rev12_attr_baselines.csv 저장: 300 행
+rev12 exit=0

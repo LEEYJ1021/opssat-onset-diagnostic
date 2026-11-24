@@ -1,0 +1,7 @@
+id,analysis,estimator,n,n_pos,n_neg,source_script,note
+L1,tabular models,KF-BOCPD,4961,168,4793,pipeline/07_supplementary/rev5_models.py,9 statistics required; 1163 groups
+L2,17th-model sensitivity,KF-BOCPD,4974,168,4806,pipeline/07_supplementary/rev7_mlp_attrib.py,3 statistics required (FEATS)
+L3,sequence random negatives,PELT3,2693,297,2396,pipeline/06_sequence_models/rev6_seq_models.py,prevalence 11.0%
+L4,sequence pseudo negatives,PELT3,784,297,487,pipeline/06_sequence_models/rev6_seq_models.py,prevalence 37.9%
+L5,segment level (6 channels),none,1940,420,1520,pipeline/02_segment_level/rev8_segment_level.py,length-matched pairs 131/105/40/60/34/21
+L6,onset sample,KF-BOCPD,177,177,,pipeline/01_onset_estimation/paper2_pipeline.py,386 anomalous in 5 channels; 208 without detected onset

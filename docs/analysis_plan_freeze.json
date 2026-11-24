@@ -1,0 +1,71 @@
+{
+  "frozen_at": "2026-10-14T14:51:41",
+  "git_commit": null,
+  "script_sha256": "cef73027bf5cfef8467c42b35070ac04a9a1b2bb9c632c8694e5e2efbfd8674d",
+  "args": {
+    "step": "prep",
+    "base_dir": "OPSSAT-AD_LEO data",
+    "segments": null,
+    "stage_dir": null,
+    "out_dir": null,
+    "seed": 42,
+    "quick": false,
+    "skip_e5": false,
+    "min_w": 5,
+    "min_pos": 20,
+    "min_neg": 20,
+    "min_class": 10,
+    "n_boot": 2000,
+    "n_repeats": 3,
+    "e2_k": 50,
+    "e2_null": "phase",
+    "e3_channels": [
+      "CADC0872",
+      "CADC0873",
+      "CADC0874",
+      "CADC0888",
+      "CADC0894"
+    ],
+    "pelt_pen": 3.0,
+    "k_placebo": 5,
+    "max_normal": 300,
+    "e4_k": 20,
+    "e4_pre": 15,
+    "e4_post": 40,
+    "e4_w": 5,
+    "e5_boot": 500,
+    "e5_epochs": 50,
+    "e5_seq_models": "CNN1D,TCN,BiLSTM,BiGRU,TinyTransformer,LightMamba",
+    "e5_include_mlp": false,
+    "seq_half": 15,
+    "ext_series": null,
+    "ext_out": "ext_segments.csv",
+    "ext_segments": null,
+    "ext_ctx": 50,
+    "ext_minlen": 40,
+    "ext_normal_ratio": 5.0
+  },
+  "versions": {
+    "python": "3.12.3",
+    "numpy": "2.5.4",
+    "pandas": "3.0.6",
+    "scipy": "1.18.1",
+    "sklearn": "1.9.1"
+  },
+  "e1e2_channels": [
+    "CADC0872",
+    "CADC0873",
+    "CADC0874",
+    "CADC0888",
+    "CADC0892",
+    "CADC0894"
+  ],
+  "hypotheses": {
+    "H1": "onset-free segment AUC: deriv group > level group, CI(deltaAUC)>0 in >=75% of analyzable channels",
+    "H2": "canonical onset log-var-ratio > random pivots of the same anomalous segment",
+    "H3": "E3 onset definitions (A,B,C,D): deriv features keep the same sign as definition A",
+    "H4": "single-representation: diff-only and diff2-only AUC >= level-only AUC in >=80% of models",
+    "H5": "external dataset reproduces H1"
+  },
+  "note": "Freeze declared AFTER extensive exploratory analysis; separate confirmatory/exploratory in the paper."
+}
