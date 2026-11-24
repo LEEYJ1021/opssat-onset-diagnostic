@@ -1,0 +1,36 @@
+device: cuda:0
+
+=== PELT3 | window_z | neg=random: 윈도우 2693 (양성 297, 음성 2396)
+  CNN1D            level=0.592 d1=0.677 d2=0.718 all=0.691 (15s)
+
+=== PELT3 | global_robust | neg=random: 윈도우 2693 (양성 297, 음성 2396)
+  CNN1D            level=0.664 d1=0.621 d2=0.579 all=0.724 (13s)
+
+[1] 모델 중앙값 AUC (neg=random)
+set                      level     d1     d2  deriv    all  all_minus_d1  all_minus_d2
+estimator mode                                                                        
+PELT3     global_robust  0.664  0.621  0.579  0.655  0.724         0.721         0.706
+          window_z       0.592  0.677  0.718  0.681  0.691         0.682         0.665
+
+[2] ΔAUC: 모델 중앙값, CI>0 모델 비율, CI<0 모델 비율
+                                                     median_delta  frac_ci_pos  frac_ci_neg
+estimator mode          contrast                                                           
+PELT3     global_robust all-all_minus_d1 (d1 추가 이득)         0.002          0.0          0.0
+                        all-all_minus_d2 (d2 추가 이득)         0.018          1.0          0.0
+                        all-deriv (level 추가 이득)             0.069          1.0          0.0
+                        d1-level                           -0.043          0.0          0.0
+                        d2-level                           -0.085          0.0          1.0
+                        deriv-level                        -0.009          0.0          0.0
+          window_z      all-all_minus_d1 (d1 추가 이득)         0.010          0.0          0.0
+                        all-all_minus_d2 (d2 추가 이득)         0.026          1.0          0.0
+                        all-deriv (level 추가 이득)             0.010          1.0          0.0
+                        d1-level                            0.084          1.0          0.0
+                        d2-level                            0.125          1.0          0.0
+                        deriv-level                         0.089          1.0          0.0
+
+[3] 운영점 (all, 같은 OOF에서 Youden 선택 → 낙관적)
+                         prevalence  recall    far  precision
+estimator mode                                               
+PELT3     global_robust        0.11   0.788  0.456      0.176
+          window_z             0.11   0.872  0.511      0.175
+rev12_attr_baselines.csv 저장: 60 행
