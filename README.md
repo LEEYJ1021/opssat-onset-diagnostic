@@ -3,7 +3,7 @@
 ## Status of this repository
 
 - **All analyses are exploratory.** The analysis plan (hypotheses H1-H5 and parameters, `docs/analysis_plan_freeze.json`) was recorded on 14 October 2026, *after* extensive exploratory work. It is documented for transparency and is **not a pre-registration**.
-- This branch (`revision-v2`) contains the **revised** pipeline. The original submission (placebo contrast, sixteen-model attribution, Kendall's W) is preserved in `legacy_v1/` and at tag `v1-original-submission` for reference. **The revised paper supersedes it**; please cite the results of the revised paper only.
+- The original submission (placebo contrast, sixteen-model attribution, Kendall's W) is preserved in `legacy_v1/` for reference.
 - Two claims of the original submission were refined in the revision after the estimator-aware controls were applied: (i) that rate-of-change variance "marks anomaly onset", and (ii) that sixteen models "never rely on level". The revised paper instead reports a length-controlled segment-level result and an estimator-aware analysis of onset-centred statistics.
 
 ## What the revised paper reports (one paragraph)
