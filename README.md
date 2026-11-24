@@ -184,7 +184,7 @@ Tolerances: `rev8b` reproduces `rev8` to within 1.5e-5 (same seeds). Sequence-mo
 | Supplementary Table S7 (sequence models) | `rev6_seq_models.py` | `rev6_auc*.csv`, `rev6_seed_model_long.csv` |
 | Supplementary Table S2 (attribution baselines) | `rev12_seq_attr.py` | `rev12_attr_baselines.csv` |
 | Supplementary Note on the seventeenth model | `rev5_models.py`, `rev7_mlp_attrib.py` | `rev7_attrib_sensitivity.csv` |
-| Supplementary Table S8 (firing rate by length) | computed from the stage2 tier summaries (no dedicated script in this repository; table in the Supplementary Information) | - |
+| Supplementary Table S8 (firing rate by length) | computed ad hoc from the stage2 tier summaries (not reproduced by a script in this repository) | - |
 
 ## Randomness and determinism
 
